@@ -2150,6 +2150,13 @@ class DeepseekV2ForCausalLM(nn.Module):
                             cached_a_proj.pop(q_a_proj_name)
                             cached_a_proj.pop(kv_a_proj_name)
                     else:
+                        if (
+                            "k_scale" in name or "v_scale" in name
+                        ) and name not in params_dict:
+                            # modelopt attn kv scale is named differently
+                            for scale in ["k_scale", "v_scale"]:
+                                if scale in name:
+                                    name = name.replace(f"{scale[0]}_proj", "attn_mqa") 
                         param = params_dict[name]
                         weight_loader = getattr(
                             param, "weight_loader", default_weight_loader

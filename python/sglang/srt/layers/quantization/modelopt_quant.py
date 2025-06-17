@@ -746,6 +746,7 @@ class ModelOptNvFp4FusedMoEMethod:
         use_grouped_topk: bool,
         topk_group: Optional[int] = None,
         num_expert_group: Optional[int] = None,
+        num_fused_shared_experts: int = 0,
         custom_routing_function: Optional[Callable] = None,
         correction_bias: Optional[torch.Tensor] = None,
         activation: str = "silu",
@@ -754,7 +755,7 @@ class ModelOptNvFp4FusedMoEMethod:
         no_combine: bool = False,
         routed_scaling_factor: Optional[float] = None,
     ) -> torch.Tensor:
-
+        
         assert activation == "silu", "Only SiLU activation is supported."
 
         from sglang.srt.layers.moe.fused_moe_triton.fused_moe import fused_experts
@@ -768,6 +769,7 @@ class ModelOptNvFp4FusedMoEMethod:
             renormalize=renormalize,
             topk_group=topk_group,
             num_expert_group=num_expert_group,
+            num_fused_shared_experts=num_fused_shared_experts,
             custom_routing_function=custom_routing_function,
             correction_bias=correction_bias,
             routed_scaling_factor=routed_scaling_factor,
