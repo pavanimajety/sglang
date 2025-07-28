@@ -7,6 +7,11 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 import torch
 from torch.nn.parameter import Parameter
 
+import json
+import os
+from datetime import datetime
+import csv
+
 from sglang.srt.layers.moe.cutlass_moe_params import CutlassMoEParams, CutlassMoEType
 from sglang.srt.layers.parameter import ModelWeightParameter, PerTensorScaleParameter
 from sglang.srt.layers.quantization.base_config import (
@@ -55,6 +60,9 @@ except ImportError:
 
 # Initialize logger for the module
 logger = logging.getLogger(__name__)
+
+# Global set to track written batch sizes
+_written_batch_sizes = set()
 
 # Supported activation schemes for the current configuration
 ACTIVATION_SCHEMES = ["static"]
@@ -970,12 +978,56 @@ class ModelOptNvFp4FusedMoEMethod(FusedMoEMethodBase):
         assert activation == "silu", "Only SiLU activation is supported."
 
         if self.enable_flashinfer_cutlass_moe:
-            assert (
-                not apply_router_weight_on_input
-            ), "apply_router_weight_on_input is not supported for Flashinfer"
-            # TRTLLM Cutlass moe takes in activations in BF16/Half/nvfp4 precision
-            # and fp4 quantized weights loaded from the checkpoint
+            topk_weights, topk_ids = select_experts(
+                 hidden_states=x,
+                 router_logits=router_logits,
+                 use_grouped_topk=use_grouped_topk,
+                 top_k=top_k,
+                 renormalize=renormalize,
+                 topk_group=topk_group,
+                 num_expert_group=num_expert_group,
+                 num_fused_shared_experts=num_fused_shared_experts,
+                 custom_routing_function=custom_routing_function,
+                 correction_bias=correction_bias,
+                 routed_scaling_factor=1/routed_scaling_factor,
+                )
+
+        if self.enable_flashinfer_moe:
             topk_weights, topk_ids, _ = topk_output
+            
+            # Collect shapes for debugging
+            # shapes_data = {
+            #     "timestamp": datetime.now().isoformat(),
+            #     "x_shape": list(x.shape),
+            #     "topk_ids_shape": list(topk_ids.shape),
+            #     "topk_weights_shape": list(topk_weights.shape),
+            #     "w13_weight_shape": list(layer.w13_weight.shape),
+            #     "w2_weight_shape": list(layer.w2_weight.shape),
+            #     "w13_input_scale_quant_shape": list(layer.w13_input_scale_quant.shape),
+            #     "w13_blockscale_swizzled_shape": list(layer.w13_blockscale_swizzled.shape),
+            #     "g1_alphas_shape": list(layer.g1_alphas.shape),
+            #     "w2_input_scale_quant_shape": list(layer.w2_input_scale_quant.shape),
+            #     "w2_blockscale_swizzled_shape": list(layer.w2_blockscale_swizzled.shape),
+            #     "g2_alphas_shape": list(layer.g2_alphas.shape),
+            #     "x_dtype": str(x.dtype),
+            #     "topk_ids_dtype": str(topk_ids.dtype),
+            #     "topk_weights_dtype": str(topk_weights.dtype),
+            #     "w13_weight_dtype": str(layer.w13_weight.dtype),
+            #     "w2_weight_dtype": str(layer.w2_weight.dtype),
+            #     "w13_input_scale_quant_dtype": str(layer.w13_input_scale_quant.dtype),
+            #     "w13_blockscale_swizzled_dtype": str(layer.w13_blockscale_swizzled.dtype),
+            #     "g1_alphas_dtype": str(layer.g1_alphas.dtype),
+            #     "w2_input_scale_quant_dtype": str(layer.w2_input_scale_quant.dtype),
+            #     "w2_blockscale_swizzled_dtype": str(layer.w2_blockscale_swizzled.dtype),
+            #     "g2_alphas_dtype": str(layer.g2_alphas.dtype),
+            #     "ep_size": ep_size,
+            #     "ep_rank": ep_rank,
+            #     "tp_size": tp_size,
+            #     "tp_rank": tp_rank,
+            #     "tune_max_num_tokens": next_power_of_2(x.shape[0])
+            # }
+            
+>>>>>>> 2bda6befc (Debugging PS > 1)
             output = flashinfer_cutlass_fused_moe(
                 x,
                 topk_ids.to(torch.int),
@@ -996,10 +1048,35 @@ class ModelOptNvFp4FusedMoEMethod(FusedMoEMethodBase):
                 tp_size=tp_size,
                 tp_rank=tp_rank,
                 tune_max_num_tokens=next_power_of_2(x.shape[0]),
+<<<<<<< HEAD
             )[0]
             if routed_scaling_factor is not None:
                 output *= routed_scaling_factor
             return output
+=======
+            )
+            
+            # # Add output information to shapes_data
+            # shapes_data["output_shape"] = list(output[0].shape) if isinstance(output, (list, tuple)) else list(output.shape)
+            # shapes_data["output_dtype"] = str(output[0].dtype) if isinstance(output, (list, tuple)) else str(output.dtype)
+            
+            # # Only write to CSV if this batch size hasn't been written before
+            # batch_size = x.shape[0]
+            # if batch_size not in _written_batch_sizes:
+            #     # Write shapes to CSV file
+            #     output_dir = "flashinfer_shapes_debug"
+            #     os.makedirs(output_dir, exist_ok=True)
+            #     csv_filepath = os.path.join(output_dir, "flashinfer_shapes.csv")
+                
+            #     with open(csv_filepath, 'a', newline='') as f:
+            #         writer = csv.DictWriter(f, fieldnames=shapes_data.keys())
+            #         writer.writerow(shapes_data)
+                
+            #     # Mark this batch size as written
+            #     _written_batch_sizes.add(batch_size)
+            
+            return output[0]
+>>>>>>> 2bda6befc (Debugging PS > 1)
 
         from sglang.srt.layers.moe.cutlass_moe import cutlass_moe_fp4
 
