@@ -42,7 +42,7 @@ def _launch_server(
         "-m",
         "sglang.launch_server",
         "--model",
-        "nvidia/DeepSeek-R1-0528-FP4",
+        "/tmp/DeepSeek-R1-FP4/snapshots/574fdb8a5347fdbc06b2c18488699c0c17d71e05",
         "--trust-remote-code",
         "--quantization",
         "modelopt_fp4",
