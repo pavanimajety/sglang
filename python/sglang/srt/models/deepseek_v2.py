@@ -1208,6 +1208,21 @@ class DeepseekV2AttentionMLA(nn.Module):
     ):
         from sglang.srt.model_executor.cuda_graph_runner import get_is_capture_mode
 
+        # dump hidden_states to sgl files similar 
+        _dbg_enabled = os.getenv("SGLANG_MLA_DEBUG", "0") == "1"
+        _dbg_layer = int(os.getenv("SGLANG_MLA_DEBUG_LAYER_ID", "0"))
+        _dbg_pre_ok = (
+            _dbg_enabled
+            and (_dbg_layer == -1 or self.layer_id == _dbg_layer)
+            and forward_batch.forward_mode.is_decode_or_idle()
+        )
+        
+        if _dbg_pre_ok:
+            try:
+                self._dbg_hidden_states_at_entry = hidden_states.detach().to("cpu")
+            except Exception:
+                pass
+
         if self.q_lora_rank is not None:
             if hidden_states.shape[0] <= 16 and self.use_min_latency_fused_a_gemm:
                 fused_qkv_a_proj_out = dsv3_fused_a_gemm(
@@ -1364,6 +1379,8 @@ class DeepseekV2AttentionMLA(nn.Module):
                     torch.save(k_pe.detach().to("cpu"), os.path.join(out_dir, "k_rope.pt"))
 
                     # DEBUG add: also dump pre-ROPE Q and raw Q_nope (before BMM)
+                    if hasattr(self, "_dbg_hidden_states_at_entry"):
+                        torch.save(self._dbg_hidden_states_at_entry, os.path.join(out_dir, "hidden_states_at_entry.pt"))
                     if hasattr(self, "_dbg_q_nope_raw"):
                         torch.save(self._dbg_q_nope_raw, os.path.join(out_dir, "q_nope_raw.pt"))
                     if hasattr(self, "_dbg_q_rope_pre"):

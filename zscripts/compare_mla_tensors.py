@@ -70,6 +70,7 @@ def print_tensor_head(t, name, n=10):
 def compare_step_tensors(step_dir1, step_dir2, step_num):
     """Compare all tensors for a given step between two backends."""
     tensor_files = [
+        "hidden_states_at_entry.pt",  # Hidden states at entry
         "q_rope_pre.pt",  # Q before RoPE rotation (debug)
         "q_rope.pt",      # Q after RoPE rotation
         "q_nope_raw.pt",  # Q NoPE before BMM (debug)
@@ -101,6 +102,7 @@ def compare_step_tensors(step_dir1, step_dir2, step_num):
     
     # Tensor descriptions for better output
     tensor_descriptions = {
+        "hidden_states_at_entry": "Hidden States at Entry",
         "q_rope_pre": "Q RoPE (pre-rotation)",
         "q_rope": "Q RoPE (post-rotation)", 
         "q_nope_raw": "Q NoPE (pre-BMM)",
