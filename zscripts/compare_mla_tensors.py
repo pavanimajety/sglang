@@ -71,6 +71,18 @@ def compare_step_tensors(step_dir1, step_dir2, step_num):
     """Compare all tensors for a given step between two backends."""
     tensor_files = [
         "hidden_states_at_entry.pt",  # Hidden states at entry
+        "fused_qkv_weight.pt",  # Fused QKV projection weights
+        "fused_qkv_a_proj_out.pt",  # Fused QKV projection output
+        "q_after_split.pt",  # Q after split from fused output
+        "latent_cache_after_split.pt",  # Latent cache after split
+        "q_stream.pt",  # Q after layernorm (stream case)
+        "q_after_layernorm.pt",  # Q after layernorm (non-stream case)
+        "q_input_b_proj.pt",  # Q input to B projection
+        "q_lora_final.pt",  # Final Q for LoRA case
+        "q_b_proj_weight.pt",  # Q B projection weights
+        "q_non_lora_final.pt",  # Final Q for non-LoRA case
+        "latent_cache.pt",  # Latent cache tensor
+        "k_proj.pt",  # K tensor after projection
         "q_rope_pre.pt",  # Q before RoPE rotation (debug)
         "q_rope.pt",      # Q after RoPE rotation
         "q_nope_raw.pt",  # Q NoPE before BMM (debug)
@@ -103,6 +115,18 @@ def compare_step_tensors(step_dir1, step_dir2, step_num):
     # Tensor descriptions for better output
     tensor_descriptions = {
         "hidden_states_at_entry": "Hidden States at Entry",
+        "fused_qkv_weight": "Fused QKV Weight",
+        "fused_qkv_a_proj_out": "Fused QKV Proj Out",
+        "q_after_split": "Q After Split",
+        "latent_cache_after_split": "Latent Cache After Split",
+        "q_stream": "Q Stream",
+        "q_after_layernorm": "Q After Layernorm",
+        "q_input_b_proj": "Q Input B Proj",
+        "q_lora_final": "Q LoRA Final",
+        "q_b_proj_weight": "Q B Proj Weight",
+        "q_non_lora_final": "Q Non-LoRA Final",
+        "latent_cache": "Latent Cache",
+        "k_proj": "K Projection",
         "q_rope_pre": "Q RoPE (pre-rotation)",
         "q_rope": "Q RoPE (post-rotation)", 
         "q_nope_raw": "Q NoPE (pre-BMM)",

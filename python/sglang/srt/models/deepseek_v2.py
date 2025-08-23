@@ -1230,10 +1230,27 @@ class DeepseekV2AttentionMLA(nn.Module):
                 )
             else:
                 fused_qkv_a_proj_out = self.fused_qkv_a_proj_with_mqa(hidden_states)[0]
+            
+            # DEBUG: capture fused_qkv_a_proj_out and weight right after projection
+            if _dbg_pre_ok:
+                try:
+                    self._dbg_fused_qkv_weight = self.fused_qkv_a_proj_with_mqa.weight.T.detach().to("cpu")
+                    self._dbg_fused_qkv_a_proj_out = fused_qkv_a_proj_out.detach().to("cpu")
+                except Exception:
+                    pass
             q, latent_cache = fused_qkv_a_proj_out.split(
                 [self.q_lora_rank, self.kv_lora_rank + self.qk_rope_head_dim], dim=-1
             )
             k_nope = latent_cache[..., : self.kv_lora_rank]
+            
+            # DEBUG: capture q and latent_cache right after split
+            if _dbg_pre_ok:
+                try:
+                    self._dbg_q_after_split = q.detach().to("cpu")
+                    self._dbg_latent_cache_after_split = latent_cache.detach().to("cpu")
+                    self._dbg_latent_cache = latent_cache.detach().to("cpu")  # Final latent_cache for LoRA case
+                except Exception:
+                    pass
 
             # overlap qk norm
             if self.alt_stream is not None and get_is_capture_mode():
@@ -1243,34 +1260,85 @@ class DeepseekV2AttentionMLA(nn.Module):
                 with torch.cuda.stream(self.alt_stream):
                     k_nope = self.kv_a_layernorm(k_nope)
                 current_stream.wait_stream(self.alt_stream)
+                
+                # DEBUG: capture q after layernorm (stream case)
+                if _dbg_pre_ok:
+                    try:
+                        self._dbg_q_stream = q.detach().to("cpu")
+                    except Exception:
+                        pass
             else:
                 q = self.q_a_layernorm(q)
                 k_nope = self.kv_a_layernorm(k_nope)
-
+                
+                # DEBUG: capture q after layernorm
+                if _dbg_pre_ok:
+                    try:
+                        self._dbg_q_after_layernorm = q.detach().to("cpu")
+                    except Exception:
+                        pass
+            
             k_nope = k_nope.unsqueeze(1)
+            
+            # DEBUG: capture k_nope after unsqueeze for LoRA case
+            if _dbg_pre_ok:
+                try:
+                    self._dbg_k_proj = k_nope.detach().to("cpu")
+                except Exception:
+                    pass
+            
+            # DEBUG: capture q input to b_proj
+            if _dbg_pre_ok:
+                try:
+                    self._dbg_q_input_b_proj = q.detach().to("cpu")
+                except Exception:
+                    pass
+                    
             q = self.q_b_proj(q)[0].view(-1, self.num_local_heads, self.qk_head_dim)
+            
+            # DEBUG: capture final q and q_b_proj weights for LoRA case
+            if _dbg_pre_ok:
+                try:
+                    self._dbg_q_lora_final = q.detach().to("cpu")
+                    self._dbg_q_b_proj_weight = self.q_b_proj.weight.detach().to("cpu")
+                except Exception:
+                    pass
         else:
             q = self.q_proj(hidden_states)[0].view(
                 -1, self.num_local_heads, self.qk_head_dim
             )
+            
+            # DEBUG: capture final q for non-LoRA case (after q_proj)
+            if _dbg_pre_ok:
+                try:
+                    self._dbg_q_non_lora_final = q.detach().to("cpu")
+                except Exception:
+                    pass
+                    
             latent_cache = self.kv_a_proj_with_mqa(hidden_states)[0]
             k_nope = latent_cache[..., : self.kv_lora_rank]
             k_nope = self.kv_a_layernorm(k_nope).unsqueeze(1)
+            
+            # DEBUG: capture k_nope after layernorm and unsqueeze for non-LoRA case
+            if _dbg_pre_ok:
+                try:
+                    self._dbg_k_proj = k_nope.detach().to("cpu")
+                except Exception:
+                    pass
+            
+            # DEBUG: capture latent_cache for non-LoRA case
+            if _dbg_pre_ok:
+                try:
+                    self._dbg_latent_cache = latent_cache.detach().to("cpu")
+                except Exception:
+                    pass
 
         q_nope, q_pe = q.split([self.qk_nope_head_dim, self.qk_rope_head_dim], dim=-1)
         k_pe = latent_cache[..., self.kv_lora_rank :].unsqueeze(1)
 
-        # DEBUG add: capture raw q_nope and q_pe before ROPE and BMM transformations
-        _dbg_enabled = os.getenv("SGLANG_MLA_DEBUG", "0") == "1"
-        _dbg_layer = int(os.getenv("SGLANG_MLA_DEBUG_LAYER_ID", "0"))
-        _dbg_pre_ok = (
-            _dbg_enabled
-            and (_dbg_layer == -1 or self.layer_id == _dbg_layer)
-            and forward_batch.forward_mode.is_decode_or_idle()
-        )
+        # DEBUG: capture q_nope and q_pe after split
         if _dbg_pre_ok:
             try:
-                # Store light CPU copies for later dump in core()
                 self._dbg_q_nope_raw = q_nope.detach().to("cpu")
                 self._dbg_q_rope_pre = q_pe.detach().to("cpu")
             except Exception:
@@ -1385,6 +1453,32 @@ class DeepseekV2AttentionMLA(nn.Module):
                         torch.save(self._dbg_q_nope_raw, os.path.join(out_dir, "q_nope_raw.pt"))
                     if hasattr(self, "_dbg_q_rope_pre"):
                         torch.save(self._dbg_q_rope_pre, os.path.join(out_dir, "q_rope_pre.pt"))
+                    
+                    # DEBUG add: dump additional tensors for comparison
+                    if hasattr(self, "_dbg_fused_qkv_weight"):
+                        torch.save(self._dbg_fused_qkv_weight, os.path.join(out_dir, "fused_qkv_weight.pt"))
+                    if hasattr(self, "_dbg_fused_qkv_a_proj_out"):
+                        torch.save(self._dbg_fused_qkv_a_proj_out, os.path.join(out_dir, "fused_qkv_a_proj_out.pt"))
+                    if hasattr(self, "_dbg_q_after_split"):
+                        torch.save(self._dbg_q_after_split, os.path.join(out_dir, "q_after_split.pt"))
+                    if hasattr(self, "_dbg_latent_cache_after_split"):
+                        torch.save(self._dbg_latent_cache_after_split, os.path.join(out_dir, "latent_cache_after_split.pt"))
+                    if hasattr(self, "_dbg_q_stream"):
+                        torch.save(self._dbg_q_stream, os.path.join(out_dir, "q_stream.pt"))
+                    if hasattr(self, "_dbg_q_after_layernorm"):
+                        torch.save(self._dbg_q_after_layernorm, os.path.join(out_dir, "q_after_layernorm.pt"))
+                    if hasattr(self, "_dbg_q_lora_final"):
+                        torch.save(self._dbg_q_lora_final, os.path.join(out_dir, "q_lora_final.pt"))
+                    if hasattr(self, "_dbg_q_input_b_proj"):
+                        torch.save(self._dbg_q_input_b_proj, os.path.join(out_dir, "q_input_b_proj.pt"))
+                    if hasattr(self, "_dbg_q_b_proj_weight"):
+                        torch.save(self._dbg_q_b_proj_weight, os.path.join(out_dir, "q_b_proj_weight.pt"))
+                    if hasattr(self, "_dbg_q_non_lora_final"):
+                        torch.save(self._dbg_q_non_lora_final, os.path.join(out_dir, "q_non_lora_final.pt"))
+                    if hasattr(self, "_dbg_latent_cache"):
+                        torch.save(self._dbg_latent_cache, os.path.join(out_dir, "latent_cache.pt"))
+                    if hasattr(self, "_dbg_k_proj"):
+                        torch.save(self._dbg_k_proj, os.path.join(out_dir, "k_proj.pt"))
 
                     # outputs
                     torch.save(attn_output.detach().to("cpu"), os.path.join(out_dir, "attn_out.pt"))

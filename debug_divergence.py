@@ -44,6 +44,7 @@ def _launch_server(
         "--model",
         "/tmp/DeepSeek-R1-FP4/snapshots/574fdb8a5347fdbc06b2c18488699c0c17d71e05",
         "--trust-remote-code",
+        "--disable-radix-cache",
         "--quantization",
         "modelopt_fp4",
         "--attention-backend",
@@ -90,6 +91,20 @@ def _send_generate_request(port: int, prompt: str, max_new_tokens: int = 10) -> 
     r.raise_for_status()
     return r.json()
 
+def _send_batch_generate_request(port: int, prompts: list, max_new_tokens: int = 10) -> list:
+    url = f"http://127.0.0.1:{port}/generate"
+    payload = {
+        "text": prompts,
+        "sampling_params": {
+            "temperature": 0.0,
+            "max_new_tokens": max_new_tokens,
+            "ignore_eos": True,
+        },
+    }
+    r = requests.post(url, json=payload, timeout=600)
+    r.raise_for_status()
+    return r.json()
+
 
 def _cleanup_dir(path: str) -> None:
     if os.path.isdir(path):
@@ -105,7 +120,12 @@ def main() -> None:
         "--prompt",
         type=str,
         default="The capital of France is great because",
-        help="Prompt to generate from",
+        help="Single prompt to generate from (default: use all test prompts)",
+    )
+    parser.add_argument(
+        "--use-all-prompts",
+        action="store_true",
+        help="Explicitly use all test prompts (this is now the default behavior)",
     )
     parser.add_argument(
         "--tokens",
@@ -156,6 +176,32 @@ def main() -> None:
     os.makedirs(os.path.join(base_dump_dir, "flashinfer"), exist_ok=True)
     os.makedirs(os.path.join(base_dump_dir, "trtllm"), exist_ok=True)
 
+    # Define all test prompts
+    all_prompts = [
+        "The future of AI is",
+        "The future of AI is",
+        "Hello, my name is Simon. I work as a machine learning engineer. I love to ",
+        "The president of the United States is",
+        "The president of the Republic of India is",
+        "The president of the New York City is",
+        "The future of AI is mainly about how it can ",
+        "The capital of France is great because"
+    ]
+    
+    # Use all prompts by default, or single prompt if specified
+    if args.prompt != "The capital of France is great because" or args.use_all_prompts:
+        # User specified a custom prompt or explicitly requested all prompts
+        if args.use_all_prompts:
+            prompts_to_test = all_prompts
+            print(f"Testing {len(prompts_to_test)} prompts")
+        else:
+            prompts_to_test = [args.prompt]
+            print(f"Testing single prompt: {args.prompt}")
+    else:
+        # Default behavior: use all prompts
+        prompts_to_test = all_prompts
+        print(f"Testing {len(prompts_to_test)} prompts (default)")
+
     fi_env = {
         "SGLANG_MLA_DEBUG_LAYER_ID": str(args.layer_id),
         "SGLANG_MLA_DEBUG_STEPS": str(args.tokens),
@@ -192,15 +238,23 @@ def main() -> None:
         _wait_for_server(args.flashinfer_port)
         _wait_for_server(args.trtllm_port)
 
-        print("Sending request to flashinfer...")
-        fi_res = _send_generate_request(args.flashinfer_port, args.prompt, args.tokens)
-        print("Flashinfer response:", fi_res.get("text", "<no text>"))
+        # Send batch requests to both servers
+        print(f"\n=== Sending batch of {len(prompts_to_test)} prompts ===")
+        print("Prompts:", prompts_to_test)
+        
+        print("Sending batch request to flashinfer...")
+        fi_res = _send_batch_generate_request(args.flashinfer_port, prompts_to_test, args.tokens)
+        print("Flashinfer responses:")
+        for i, response in enumerate(fi_res):
+            print(f"  {i+1}: {response.get('text', '<no text>')}")
 
-        print("Sending request to trtllm_mla...")
-        trt_res = _send_generate_request(args.trtllm_port, args.prompt, args.tokens)
-        print("TRTLLM response:", trt_res.get("text", "<no text>"))
+        print("Sending batch request to trtllm_mla...")
+        trt_res = _send_batch_generate_request(args.trtllm_port, prompts_to_test, args.tokens)
+        print("TRTLLM responses:")
+        for i, response in enumerate(trt_res):
+            print(f"  {i+1}: {response.get('text', '<no text>')}")
 
-        print("Done. Dumps are in:")
+        print(f"\nDone. Dumps are in:")
         print(os.path.join(base_dump_dir, "flashinfer"))
         print(os.path.join(base_dump_dir, "trtllm"))
     finally:
