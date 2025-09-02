@@ -1,9 +1,10 @@
 from __future__ import annotations
+
 import copy
-from dataclasses import dataclass
 import logging
 import os
 import time
+from dataclasses import dataclass
 from typing import List, Optional
 
 import torch
@@ -83,22 +84,40 @@ class EagleDraftInput:
 
     def prepare_for_extend(self, batch: ScheduleBatch):
         # Debug prints for prepare_for_extend
-        if hasattr(batch, 'req_pool_indices') and batch.req_pool_indices is not None:
+        if hasattr(batch, "req_pool_indices") and batch.req_pool_indices is not None:
             device_index = batch.req_pool_indices.device.index
         else:
             device_index = 0
-            
+
         if device_index == 0:
             print(f"DEBUG: [EagleDraftInput] prepare_for_extend called", flush=True)
-            print(f"DEBUG: [EagleDraftInput] batch.forward_mode = {batch.forward_mode.name}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] Before - batch.input_ids.shape = {batch.input_ids.shape}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] Before - batch.extend_lens = {batch.extend_lens}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] Before - self.verified_id = {self.verified_id}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] Before - batch.seq_lens = {batch.seq_lens}", flush=True)
+            print(
+                f"DEBUG: [EagleDraftInput] batch.forward_mode = {batch.forward_mode.name}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] Before - batch.input_ids.shape = {batch.input_ids.shape}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] Before - batch.extend_lens = {batch.extend_lens}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] Before - self.verified_id = {self.verified_id}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] Before - batch.seq_lens = {batch.seq_lens}",
+                flush=True,
+            )
 
         if batch.forward_mode.is_idle():
             if device_index == 0:
-                print(f"DEBUG: [EagleDraftInput] prepare_for_extend returning early (idle)", flush=True)
+                print(
+                    f"DEBUG: [EagleDraftInput] prepare_for_extend returning early (idle)",
+                    flush=True,
+                )
             return
 
         # Prefill only generate 1 token.
@@ -111,10 +130,16 @@ class EagleDraftInput:
                 (input_ids[1:], self.verified_id[i].reshape(1))
             )
             pt += extend_len
-            
+
         if device_index == 0:
-            print(f"DEBUG: [EagleDraftInput] After - batch.input_ids.shape = {batch.input_ids.shape}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] After - batch.input_ids = {batch.input_ids}", flush=True)
+            print(
+                f"DEBUG: [EagleDraftInput] After - batch.input_ids.shape = {batch.input_ids.shape}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] After - batch.input_ids = {batch.input_ids}",
+                flush=True,
+            )
             print(f"DEBUG: [EagleDraftInput] prepare_for_extend completed", flush=True)
 
     @classmethod
@@ -142,26 +167,59 @@ class EagleDraftInput:
         speculative_num_steps: int,
     ):
         # Debug prints for prepare_extend_after_decode
-        if hasattr(batch, 'req_pool_indices') and batch.req_pool_indices is not None:
+        if hasattr(batch, "req_pool_indices") and batch.req_pool_indices is not None:
             device_index = batch.req_pool_indices.device.index
         else:
             device_index = 0
-            
+
         if device_index == 0:
-            print(f"DEBUG: [EagleDraftInput] prepare_extend_after_decode called", flush=True)
-            print(f"DEBUG: [EagleDraftInput] batch.forward_mode = {batch.forward_mode.name}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] speculative_num_steps = {speculative_num_steps}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] Before - batch.input_ids.shape = {batch.input_ids.shape}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] Before - batch.extend_lens = {batch.extend_lens}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] Before - batch.seq_lens = {batch.seq_lens}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] Before - batch.req_pool_indices = {batch.req_pool_indices}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] Before - self.verified_id = {self.verified_id}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] Before - self.accept_length = {self.accept_length}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] Before - batch.spec_info.accept_length_cpu = {batch.spec_info.accept_length_cpu}", flush=True)
+            print(
+                f"DEBUG: [EagleDraftInput] prepare_extend_after_decode called",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] batch.forward_mode = {batch.forward_mode.name}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] speculative_num_steps = {speculative_num_steps}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] Before - batch.input_ids.shape = {batch.input_ids.shape}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] Before - batch.extend_lens = {batch.extend_lens}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] Before - batch.seq_lens = {batch.seq_lens}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] Before - batch.req_pool_indices = {batch.req_pool_indices}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] Before - self.verified_id = {self.verified_id}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] Before - self.accept_length = {self.accept_length}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] Before - batch.spec_info.accept_length_cpu = {batch.spec_info.accept_length_cpu}",
+                flush=True,
+            )
 
         if batch.forward_mode.is_idle():
             if device_index == 0:
-                print(f"DEBUG: [EagleDraftInput] prepare_extend_after_decode returning early (idle)", flush=True)
+                print(
+                    f"DEBUG: [EagleDraftInput] prepare_extend_after_decode returning early (idle)",
+                    flush=True,
+                )
             return
 
         batch.input_ids = self.verified_id
@@ -176,17 +234,44 @@ class EagleDraftInput:
         self.accept_length.add_(1)
         self.positions = torch.empty_like(batch.input_ids, dtype=torch.long)
         self.verified_id = torch.empty_like(self.accept_length, dtype=torch.int32)
-        
+
         if device_index == 0:
-            print(f"DEBUG: [EagleDraftInput] After - batch.input_ids.shape = {batch.input_ids.shape}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] After - batch.input_ids = {batch.input_ids}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] After - batch.extend_lens = {batch.extend_lens}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] After - batch.extend_num_tokens = {batch.extend_num_tokens}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] After - batch.seq_lens = {batch.seq_lens}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] After - batch.req_pool_indices = {batch.req_pool_indices}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] After - self.accept_length = {self.accept_length}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] After - self.positions.shape = {self.positions.shape}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] After - self.verified_id.shape = {self.verified_id.shape}", flush=True)
+            print(
+                f"DEBUG: [EagleDraftInput] After - batch.input_ids.shape = {batch.input_ids.shape}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] After - batch.input_ids = {batch.input_ids}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] After - batch.extend_lens = {batch.extend_lens}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] After - batch.extend_num_tokens = {batch.extend_num_tokens}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] After - batch.seq_lens = {batch.seq_lens}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] After - batch.req_pool_indices = {batch.req_pool_indices}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] After - self.accept_length = {self.accept_length}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] After - self.positions.shape = {self.positions.shape}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleDraftInput] After - self.verified_id.shape = {self.verified_id.shape}",
+                flush=True,
+            )
 
         create_extend_after_decode_spec_info[(len(batch.seq_lens),)](
             batch.input_ids,
@@ -206,7 +291,10 @@ class EagleDraftInput:
         page_size: int,
     ):
         if req_pool_indices.device.index == 0:
-            print(f"DEBUG: [EagleDraftInput] generate_attn_arg_prefill called!", flush=True)
+            print(
+                f"DEBUG: [EagleDraftInput] generate_attn_arg_prefill called!",
+                flush=True,
+            )
         bs = self.accept_length.numel()
         if req_pool_indices.device.index == 0:
             print(f"DEBUG: batch size (bs) = {bs}", flush=True)
@@ -223,10 +311,11 @@ class EagleDraftInput:
             print(f"qo_indptr: {qo_indptr}", flush=True)
             print(f"req_pool_indices: {req_pool_indices}", flush=True)
             for i in range(bs):
-                print(f"req_to_token[req_pool_indices[{i}]]: {req_to_token[req_pool_indices[i]]}", flush=True)
-        kv_indices = torch.empty(
-            kv_indptr[-1], dtype=torch.int32, device="cuda"
-        )
+                print(
+                    f"req_to_token[req_pool_indices[{i}]]: {req_to_token[req_pool_indices[i]]}",
+                    flush=True,
+                )
+        kv_indices = torch.empty(kv_indptr[-1], dtype=torch.int32, device="cuda")
 
         create_flashinfer_kv_indices_triton[(bs,)](
             req_to_token,
@@ -240,7 +329,10 @@ class EagleDraftInput:
         )
         if req_pool_indices.device.index == 0:
             print(f"DEBUG: [EagleDraftInput] kv_indices: {kv_indices}", flush=True)
-            print(f"DEBUG: [EagleDraftInput] generate_attn_arg_prefill completed!", flush=True)
+            print(
+                f"DEBUG: [EagleDraftInput] generate_attn_arg_prefill completed!",
+                flush=True,
+            )
         return kv_indices, kv_indptr, qo_indptr, None
 
     def filter_batch(self, new_indices: torch.Tensor, has_been_filtered: bool = True):
@@ -336,25 +428,49 @@ class EagleVerifyInput:
 
     def prepare_for_verify(self, batch: ScheduleBatch, page_size: int):
         # Debug prints for prepare_for_verify
-        if hasattr(batch, 'req_pool_indices') and batch.req_pool_indices is not None:
+        if hasattr(batch, "req_pool_indices") and batch.req_pool_indices is not None:
             device_index = batch.req_pool_indices.device.index
         else:
             device_index = 0
-            
+
         if device_index == 0:
             print(f"DEBUG: [EagleVerifyInput] prepare_for_verify called", flush=True)
-            print(f"DEBUG: [EagleVerifyInput] batch.forward_mode = {batch.forward_mode.name}", flush=True)
+            print(
+                f"DEBUG: [EagleVerifyInput] batch.forward_mode = {batch.forward_mode.name}",
+                flush=True,
+            )
             print(f"DEBUG: [EagleVerifyInput] page_size = {page_size}", flush=True)
-            print(f"DEBUG: [EagleVerifyInput] Before - batch.input_ids.shape = {batch.input_ids.shape}", flush=True)
-            print(f"DEBUG: [EagleVerifyInput] Before - batch.input_ids = {batch.input_ids}", flush=True)
-            print(f"DEBUG: [EagleVerifyInput] Before - batch.seq_lens = {batch.seq_lens}", flush=True)
-            print(f"DEBUG: [EagleVerifyInput] Before - batch.req_pool_indices = {batch.req_pool_indices}", flush=True)
-            print(f"DEBUG: [EagleVerifyInput] Before - self.draft_token = {self.draft_token}", flush=True)
-            print(f"DEBUG: [EagleVerifyInput] Before - self.draft_token_num = {self.draft_token_num}", flush=True)
+            print(
+                f"DEBUG: [EagleVerifyInput] Before - batch.input_ids.shape = {batch.input_ids.shape}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleVerifyInput] Before - batch.input_ids = {batch.input_ids}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleVerifyInput] Before - batch.seq_lens = {batch.seq_lens}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleVerifyInput] Before - batch.req_pool_indices = {batch.req_pool_indices}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleVerifyInput] Before - self.draft_token = {self.draft_token}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleVerifyInput] Before - self.draft_token_num = {self.draft_token_num}",
+                flush=True,
+            )
 
         if batch.forward_mode.is_idle():
             if device_index == 0:
-                print(f"DEBUG: [EagleVerifyInput] prepare_for_verify returning early (idle)", flush=True)
+                print(
+                    f"DEBUG: [EagleVerifyInput] prepare_for_verify returning early (idle)",
+                    flush=True,
+                )
             return
 
         batch.input_ids = self.draft_token
@@ -385,14 +501,29 @@ class EagleVerifyInput:
             batch.req_to_token_pool.req_to_token.shape[1],
             next_power_of_2(bs),
         )
-        
+
         if device_index == 0:
-            print(f"DEBUG: [EagleVerifyInput] After - batch.input_ids.shape = {batch.input_ids.shape}", flush=True)
-            print(f"DEBUG: [EagleVerifyInput] After - batch.input_ids = {batch.input_ids}", flush=True)
-            print(f"DEBUG: [EagleVerifyInput] After - batch.out_cache_loc = {batch.out_cache_loc}", flush=True)
-            print(f"DEBUG: [EagleVerifyInput] After - end_offset = {end_offset}", flush=True)
+            print(
+                f"DEBUG: [EagleVerifyInput] After - batch.input_ids.shape = {batch.input_ids.shape}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleVerifyInput] After - batch.input_ids = {batch.input_ids}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleVerifyInput] After - batch.out_cache_loc = {batch.out_cache_loc}",
+                flush=True,
+            )
+            print(
+                f"DEBUG: [EagleVerifyInput] After - end_offset = {end_offset}",
+                flush=True,
+            )
             if page_size != 1:
-                print(f"DEBUG: [EagleVerifyInput] After - self.last_loc = {self.last_loc}", flush=True)
+                print(
+                    f"DEBUG: [EagleVerifyInput] After - self.last_loc = {self.last_loc}",
+                    flush=True,
+                )
             print(f"DEBUG: [EagleVerifyInput] prepare_for_verify completed", flush=True)
 
     def generate_attn_arg_prefill(
@@ -404,8 +535,11 @@ class EagleVerifyInput:
         page_size: int,
     ):
         if req_pool_indices.device.index == 0:
-            print("="*80)
-            print(f"DEBUG: [EagleVerifyInput] generate_attn_arg_prefill called!", flush=True)
+            print("=" * 80)
+            print(
+                f"DEBUG: [EagleVerifyInput] generate_attn_arg_prefill called!",
+                flush=True,
+            )
             print(f"paged_kernel_lens: {paged_kernel_lens}", flush=True)
             print(f"req_pool_indices: {req_pool_indices}", flush=True)
 
@@ -422,13 +556,13 @@ class EagleVerifyInput:
         cum_kv_seq_len = torch.zeros(
             (batch_size + 1,), dtype=torch.int32, device=device
         )
-        
-        seq_lens_with_draft_tokens= paged_kernel_lens + self.draft_token_num
+
+        seq_lens_with_draft_tokens = paged_kernel_lens + self.draft_token_num
         cum_kv_seq_len[1:] = torch.cumsum(seq_lens_with_draft_tokens, dim=0)
 
-        kv_indptr = torch.zeros((batch_size +1, ), dtype=torch.int32, device=device)
+        kv_indptr = torch.zeros((batch_size + 1,), dtype=torch.int32, device=device)
         num_pages_per_req = (paged_kernel_lens + page_size - 1) // page_size
-        kv_indptr[1:batch_size + 1] = torch.cumsum(num_pages_per_req, dim=0)
+        kv_indptr[1 : batch_size + 1] = torch.cumsum(num_pages_per_req, dim=0)
 
         kv_indices = torch.empty(
             kv_indptr[-1],
@@ -437,11 +571,15 @@ class EagleVerifyInput:
         )
         if req_pool_indices.device.index == 0:
             print(f"DEBUG: [EagleVerifyInput] req_pool_indices: {req_pool_indices}")
-            print(f"DEBUG: [EagleVerifyInput] seq_lens_with_draft_tokens: {seq_lens_with_draft_tokens}")
+            print(
+                f"DEBUG: [EagleVerifyInput] seq_lens_with_draft_tokens: {seq_lens_with_draft_tokens}"
+            )
             print(f"DEBUG: [EagleVerifyInput] num_pages_per_req: {num_pages_per_req}")
             print(f"DEBUG: [EagleVerifyInput] cum_kv_seq_len: {cum_kv_seq_len}")
             for i in range(batch_size):
-                print(f"DEBUG: [EagleVerifyInput] req_to_token[{i}]: {req_to_token[i][:seq_lens_with_draft_tokens[i]]}")
+                print(
+                    f"DEBUG: [EagleVerifyInput] req_to_token[{i}]: {req_to_token[i][:seq_lens_with_draft_tokens[i]]}"
+                )
 
         create_flashinfer_kv_indices_triton[(batch_size,)](
             req_to_token,
@@ -456,7 +594,10 @@ class EagleVerifyInput:
         if req_pool_indices.device.index == 0:
             print(f"DEBUG: [EagleVerifyInput] kv_indptr: {kv_indptr}", flush=True)
             print(f"DEBUG: [EagleVerifyInput] kv_indices: {kv_indices}", flush=True)
-            print(f"DEBUG: [EagleVerifyInput] generate_attn_arg_prefill completed!", flush=True)
+            print(
+                f"DEBUG: [EagleVerifyInput] generate_attn_arg_prefill completed!",
+                flush=True,
+            )
         return kv_indices, kv_indptr, qo_indptr, self.custom_mask
 
     def verify(
@@ -998,31 +1139,31 @@ def generate_draft_decode_kv_indices(
 ):
     """
     Generate KV indices for speculative decoding with draft tokens.
-    
+
     This Triton kernel builds KV cache indices for speculative decoding scenarios where
     multiple draft tokens are generated and verified. It handles both the existing sequence
     tokens and the newly generated draft tokens, with special handling for different page sizes
     and top-k configurations.
-    
+
     **Parallelization Strategy:**
     The kernel is parallelized across three dimensions:
     - axis=0 (iters): Speculative decoding steps (0 to num_steps-1)
-    - axis=1 (bid): Batch sequence index (0 to num_seqs-1) 
+    - axis=1 (bid): Batch sequence index (0 to num_seqs-1)
     - axis=2 (topk_id): Top-k candidate index (0 to topk-1)
-    
+
     Each thread block handles one (step, sequence, topk_candidate) combination, allowing
     independent processing of different speculative paths.
-    
+
     **Page Size and Top-k Relationship:**
     The kernel has two different code paths based on page_size and topk values:
-    
+
     1. **Simple Path (page_size == 1 or topk == 1):**
        - Used when page_size=1 (no paging) or topk=1 (single candidate)
        - Draft tokens are stored sequentially after existing tokens
        - Example: If seq_len=5, num_steps=3, topk=2:
          - Sequence 0, topk=0: tokens [0,1,2,3,4] + draft [5,6,7]
          - Sequence 0, topk=1: tokens [0,1,2,3,4] + draft [8,9,10]
-    
+
     2. **Page-aligned Path (page_size > 1 and topk > 1):**
        - Used when both page_size > 1 and topk > 1
        - Ensures draft tokens are properly aligned to page boundaries
@@ -1030,30 +1171,30 @@ def generate_draft_decode_kv_indices(
        - Example: If seq_len=7, page_size=4, num_steps=3, topk=2:
          - Sequence 0, topk=0: pages [0,1] + new_pages [2,3] for draft tokens
          - Sequence 0, topk=1: pages [0,1] + new_pages [4,5] for draft tokens
-    
+
     **Input Examples:**
-    
+
     Example 1 - Simple case (page_size=1, topk=1):
         req_pool_indices = [0, 1]           # Sequence 0 uses pool 0, sequence 1 uses pool 1
         paged_kernel_lens = [5, 3]          # Sequence 0 has 5 tokens, sequence 1 has 3 tokens
         req_to_token = [[10,11,12,13,14,-1], [20,21,22,-1,-1,-1]]  # Token locations in radix tree
         num_steps = 2, topk = 1
-        
+
         Output for sequence 0, step 0:
         - kv_indices: [10,11,12,13,14,15,16]  # 5 existing + 2 draft tokens
         - kv_indptr: [0,7]                     # Cumulative token count
-    
+
     Example 2 - Page-aligned case (page_size=4, topk=2):
         req_pool_indices = [0]
         paged_kernel_lens = [7]              # 7 tokens = 1 full page + 3 tokens
         req_to_token = [[10,11,12,13,14,15,16,-1]]
         num_steps = 3, topk = 2, page_size = 4
-        
+
         Output for sequence 0, topk=0, step=0:
         - Existing: pages [10,11,12,13], [14,15,16,-1]  # 2 pages
         - Draft tokens: new pages starting at position 20
         - kv_indices: [10,11,12,13, 14,15,16,-1, 20,21,22,23]  # 3 pages total
-    
+
     **Args:**
         req_pool_indices: Request pool indices for each sequence [num_seqs]
         req_to_token: Token location lookup table [max_batch, max_context_len]
@@ -1068,7 +1209,7 @@ def generate_draft_decode_kv_indices(
         iter_upper: Upper bound for iterations (power of 2)
         num_tokens_upper: Upper bound for token count (power of 2)
         page_size: Number of tokens per page (1 for no paging)
-    
+
     **Usage:**
         Called from common_template method in FlashInferMLAMultiStepDraftBackend
         to generate KV indices for each speculative decoding step.
