@@ -174,7 +174,7 @@ class EagleDraftInput:
             req_to_token.size(1),
             page_size,
         )
-        return kv_indices, kv_indptr, qo_indptr, None
+        return paged_kernel_lens, kv_indices, kv_indptr, qo_indptr, None
 
     def filter_batch(self, new_indices: torch.Tensor, has_been_filtered: bool = True):
         if has_been_filtered:
@@ -347,7 +347,7 @@ class EagleVerifyInput:
             req_to_token.size(1),
             page_size,
         )
-        return kv_indices, kv_indptr, qo_indptr, self.custom_mask
+        return seq_lens_with_draft_tokens, kv_indices, kv_indptr, qo_indptr, self.custom_mask
 
     def verify(
         self,
