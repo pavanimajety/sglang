@@ -178,7 +178,6 @@ class FlashInferMLAAttnBackend(AttentionBackend):
         self,
         model_runner: ModelRunner,
         skip_prefill: bool = False,
-        is_draft_backend: bool = False,
         kv_indptr_buf: Optional[torch.Tensor] = None,
         q_indptr_decode_buf: Optional[torch.Tensor] = None,
     ):
@@ -195,7 +194,6 @@ class FlashInferMLAAttnBackend(AttentionBackend):
             and not global_server_args_dict["flashinfer_mla_disable_ragged"]
         )
         self.page_size = model_runner.page_size
-        self.is_draft_backend = is_draft_backend
         # Allocate buffers
         global global_workspace_buffer
         if global_workspace_buffer is None:
@@ -623,10 +621,7 @@ class FlashInferMLAAttnBackend(AttentionBackend):
             q.dtype
         )
 
-        if not self.is_draft_backend:
-            k_buf = k_buf.view(-1, self.page_size, k_buf.shape[-1])
-        else:
-            k_buf = k_buf.view(-1, 1, k_buf.shape[-1])
+        k_buf = k_buf.view(-1, self.page_size, k_buf.shape[-1])
 
         o = q_nope.new_empty(q_nope.shape)
         # Direct call to run without the wrapper
@@ -930,7 +925,6 @@ class FlashInferMLAMultiStepDraftBackend:
         self.q_indptr_decode = torch.arange(
             0, max_bs + 1, dtype=torch.int32, device=model_runner.device
         )
-        self.is_draft_backend = True
         self.attn_backends = []
         for i in range(self.speculative_num_steps):
             self.attn_backends.append(
@@ -939,7 +933,6 @@ class FlashInferMLAMultiStepDraftBackend:
                     skip_prefill=True,
                     kv_indptr_buf=self.kv_indptr[i],
                     q_indptr_decode_buf=self.q_indptr_decode,
-                    is_draft_backend=self.is_draft_backend
                 )
             )
 
